@@ -97,27 +97,26 @@ The project follows an end-to-end data flow from real-time generation to analyti
 The platform structures relationships between core operational entities:
 
 ```text
-Users / Pilots ──> Missions <── Drones
-                         │
-                         └──> Telemetry
+Users ──> Missions <── Drones
+             │
+             └──> Telemetry
 
-Drones ──┬──> Batteries
-         └──> Maintenance
+Drones ──┬──> Maintenance
+         └──> Telemetry
 ```
 
 ### Telemetry Payload
 
 Each telemetry entry captures real-time operational metrics:
 
-- `drone_id` (UUID / Identifier)
-- `mission_id` (UUID / Identifier)
+- `drone_id` (BIGINT / Identifier)
+- `mission_id` (BIGINT / Identifier)
 - `timestamp` (ISO-8601 Timestamp)
 - `battery_level` (%)
 - `latitude` / `longitude` (GPS Coordinates)
 - `altitude` (Meters)
 - `speed` (m/s)
 - `temperature` (°C)
-- `signal_strength` (dBm / %)
 
 ---
 
@@ -250,4 +249,26 @@ Comprehensive project documentation is maintained inside the `docs/` folder, cov
 
 **Current Phase:** Initial Backend & Database Layer Development.
 
-The Spring Boot baseline is configured using Java 21, Maven, and PostgreSQL. Domain entity design is underway, leading into JPA persistence implementation.
+The Spring Boot baseline is configured using Java 21, Maven, and PostgreSQL.
+Domain entity design is underway, leading into JPA persistence implementation.
+
+
+
+
+## Future Versions
+
+### Version 2 — Advanced Data Engineering
+
+A future version of the project will introduce a more advanced data
+engineering architecture using Apache Airflow and dbt.
+
+The current Python-based data pipeline will be extended with:
+
+- Apache Airflow for workflow orchestration.
+- dbt for SQL-based data transformation and data modeling.
+- Staging, intermediate, and analytical data models.
+- Automated data quality tests.
+- Scheduled pipeline execution.
+
+The objective is to evolve the initial data pipeline into a more
+production-oriented Data Engineering architecture.

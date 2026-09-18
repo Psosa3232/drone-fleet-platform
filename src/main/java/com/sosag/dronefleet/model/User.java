@@ -1,4 +1,4 @@
 package com.sosag.dronefleet.model;
 
-public class Telemetry {
+public class User {
 }

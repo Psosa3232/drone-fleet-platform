@@ -1,4 +1,4 @@
 package com.sosag.dronefleet.model;
 
-public class Maintence {
+public class DroneTelemetry {
 }
