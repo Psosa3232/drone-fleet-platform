@@ -1,5 +1,6 @@
 package com.sosag.dronefleet.repository;
 
+import com.sosag.dronefleet.model.Role;
 import com.sosag.dronefleet.model.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,7 @@ class UserRepositoryTest {
         user.setSurname("Doe");
         user.setEmail("john.doe@test.com");
         user.setPassword("test-password");
-        user.setRole("OPERATOR");
+        user.setRole(Role.OPERATOR);
         user.setActive(true);
         user.setCreatedAt(LocalDateTime.now());
         user.setUpdatedAt(LocalDateTime.now());

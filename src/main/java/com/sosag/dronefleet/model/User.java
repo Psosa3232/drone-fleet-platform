@@ -2,6 +2,8 @@ package com.sosag.dronefleet.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -58,9 +60,11 @@ public class User {
 
     /**
      * Role assigned to the user within the platform.
+     * Role assigned to the user and stored as a string in the database.
      */
+    @Enumerated(EnumType.STRING)
     @Column(name = "role")
-    private String role;
+    private Role role;
 
     /**
      * Indicates whether the user account is currently active.
@@ -175,7 +179,7 @@ public class User {
      *
      * @return the user's role
      */
-    public String getRole() {
+    public Role getRole() {
         return role;
     }
 
@@ -184,7 +188,7 @@ public class User {
      *
      * @param role the user's role
      */
-    public void setRole(String role) {
+    public void setRole(Role role) {
         this.role = role;
     }
 
