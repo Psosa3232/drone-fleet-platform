@@ -39,3 +39,25 @@ The cache is not part of the PostgreSQL entity-relationship model.
 
 It will be implemented later as an independent component of the
 system architecture.
+
+
+
+
+## Identifiers
+
+Database primary keys use `BIGINT GENERATED ALWAYS AS IDENTITY`.
+
+The corresponding Java entity fields use `Long` to maintain a direct mapping between PostgreSQL `BIGINT` and Java `Long`.
+
+This provides a large identifier range and keeps the Java and database types consistent.
+
+
+
+
+## Enums
+
+Java enums are persisted using `EnumType.STRING`.
+
+This stores the enum name as text in PostgreSQL instead of its numeric ordinal value.
+
+Using string-based persistence prevents data inconsistencies if the order of enum values changes in the future.
