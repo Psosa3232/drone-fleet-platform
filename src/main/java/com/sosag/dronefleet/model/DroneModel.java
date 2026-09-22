@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
@@ -72,6 +73,15 @@ public class DroneModel {
      */
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    /**
+     * Automatically sets the creation timestamp before the entity
+     * is persisted for the first time.
+     */
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+    }
 
     /**
      * Returns the unique identifier of the drone model.
@@ -175,7 +185,7 @@ public class DroneModel {
     /**
      * Sets the maximum flight time of the drone model.
      *
-     * @param maxFlightTime the maximum flight time in minutes
+     * @param maxFlightTime the maximum flight time
      */
     public void setMaxFlightTime(Integer maxFlightTime) {
         this.maxFlightTime = maxFlightTime;
