@@ -194,44 +194,52 @@ drone-fleet-platform/
 └── README.md
 ```
 
----
-
-## Development Roadmap
+-## Development Roadmap
 
 - [x] **Phase 1 — Project Setup**
-    - [x] Create Spring Boot project using Java 21 and Maven.
-    - [x] Configure PostgreSQL database connection and environment variables.
-    - [x] Define initial domain entities.
-    - [x] Configure project structure and package organization.
-    - [x] Configure application properties.
+  - [x] Create Spring Boot project using Java 21 and Maven.
+  - [x] Configure PostgreSQL database connection and environment variables.
+  - [x] Define initial domain entities.
+  - [x] Configure project structure and package organization.
+  - [x] Configure application properties.
 
-- [ ] **Phase 2 — Database Layer**
-    - [ ] Design relational schema and establish JPA relationships (`@OneToMany`, `@ManyToOne`).
-    - [ ] Create and configure database tables.
-    - [ ] Configure repositories and persistence logic.
+- [x] **Phase 2 — Database Layer**
+  - [x] Design relational schema and establish JPA relationships (`@ManyToOne`).
+  - [x] Create and configure database tables.
+  - [x] Configure repositories and persistence logic.
+  - [x] Implement repository integration tests.
+  - [x] Document JPA repositories and persistence testing.
 
 - [ ] **Phase 3 — Backend REST API**
-    - [ ] Implement REST controllers and service layer business logic.
-    - [ ] Add input validation, custom exception handling, and API documentation.
+  - [x] Create initial service layer structure.
+  - [x] Implement `DroneService`.
+  - [x] Implement `getDroneById()`.
+  - [x] Add `DroneNotFoundException`.
+  - [x] Test service logic and database integration.
+  - [x] Document the service layer.
+  - [ ] Implement REST controllers.
+  - [ ] Add input validation.
+  - [ ] Add global exception handling.
+  - [ ] Add API documentation with OpenAPI/Swagger.
 
 - [ ] **Phase 4 — Telemetry Generation & Storage**
-    - [ ] Build telemetry simulation service for realistic time-series data.
-    - [ ] Optimize batch persistence and historical endpoints.
+  - [x] Implement `DroneTelemetry` persistence model.
+  - [x] Implement telemetry repository and integration tests.
+  - [ ] Build telemetry simulation service for realistic time-series data.
+  - [ ] Optimize batch persistence and historical endpoints.
 
 - [ ] **Phase 5 — In-Memory Cache**
-    - [ ] Implement cache store with eviction, TTL, and concurrency handling.
-    - [ ] Benchmark performance against direct database access.
+  - [ ] Implement cache store with eviction, TTL, and concurrency handling.
+  - [ ] Benchmark performance against direct database access.
 
 - [ ] **Phase 6 — Data Engineering Pipeline**
-    - [ ] Build automated Python ETL scripts to extract, clean, transform, and output analytical datasets.
+  - [ ] Build automated Python ETL scripts to extract, clean, transform, and output analytical datasets.
 
 - [ ] **Phase 7 — Machine Learning Model Training**
-    - [ ] Train, evaluate, and export predictive models for battery and maintenance insights.
+  - [ ] Train, evaluate, and export predictive models for battery and maintenance insights.
 
 - [ ] **Phase 8 — Power BI Analytics**
-    - [ ] Connect analytical data sources and design fleet management and operational dashboards.
-
----
+  - [ ] Connect analytical data sources and design fleet management and operational dashboards.
 
 ## Documentation
 

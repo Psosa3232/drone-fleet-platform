@@ -5,6 +5,8 @@ import com.sosag.dronefleet.model.Drone;
 import com.sosag.dronefleet.repository.DroneRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class DroneService {
 
@@ -21,5 +23,7 @@ public class DroneService {
                 ));
     }
 
-
+    public List<Drone> getAllDrones() {
+        return droneRepository.findAll();
+    }
 }

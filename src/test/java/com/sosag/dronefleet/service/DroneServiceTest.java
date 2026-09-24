@@ -3,17 +3,24 @@ package com.sosag.dronefleet.service;
 import com.sosag.dronefleet.exception.DroneNotFoundException;
 import com.sosag.dronefleet.model.Drone;
 import com.sosag.dronefleet.model.DroneModel;
-import com.sosag.dronefleet.repository.DroneRepository;
 import com.sosag.dronefleet.repository.DroneModelRepository;
+import com.sosag.dronefleet.repository.DroneRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * Integration tests for {@link DroneService}.
+ *
+ * <p>These tests verify the interaction between the service layer,
+ * repository layer, and PostgreSQL database.</p>
+ */
 @SpringBootTest
 @Transactional
 class DroneServiceTest {
@@ -27,6 +34,9 @@ class DroneServiceTest {
     @Autowired
     private DroneModelRepository droneModelRepository;
 
+    /**
+     * Verifies that a drone can be retrieved by its identifier.
+     */
     @Test
     void shouldGetDroneById() {
 
@@ -55,9 +65,16 @@ class DroneServiceTest {
         assertEquals(drone.getDroneId(), foundDrone.getDroneId());
         assertEquals("A001", foundDrone.getSerialNumber());
         assertEquals("AVAILABLE", foundDrone.getStatus());
-        assertEquals(droneModel.getDroneModelId(), foundDrone.getDroneModel().getDroneModelId());
+        assertEquals(
+                droneModel.getDroneModelId(),
+                foundDrone.getDroneModel().getDroneModelId()
+        );
     }
 
+    /**
+     * Verifies that a DroneNotFoundException is thrown when
+     * the requested drone does not exist.
+     */
     @Test
     void shouldThrowExceptionWhenDroneDoesNotExist() {
 
@@ -66,6 +83,55 @@ class DroneServiceTest {
         assertThrows(
                 DroneNotFoundException.class,
                 () -> droneService.getDroneById(nonExistingDroneId)
+        );
+    }
+
+    /**
+     * Verifies that all persisted drones can be retrieved.
+     */
+    @Test
+    void shouldGetAllDrones() {
+
+        DroneModel droneModel = new DroneModel();
+        droneModel.setManufacturer("DJI");
+        droneModel.setModelName("Mavic 3");
+        droneModel.setBatteryCapacity(5000);
+        droneModel.setMaxSpeed(new BigDecimal("20.00"));
+        droneModel.setMaxFlightTime(46);
+        droneModel.setMaxPayload(new BigDecimal("0.90"));
+
+        droneModel = droneModelRepository.save(droneModel);
+
+        Drone firstDrone = new Drone();
+        firstDrone.setSerialNumber("A001");
+        firstDrone.setDroneModel(droneModel);
+        firstDrone.setStatus("AVAILABLE");
+        firstDrone.setBatteryLevel(new BigDecimal("95.00"));
+        firstDrone.setTotalFlightHours(new BigDecimal("10.50"));
+
+        Drone secondDrone = new Drone();
+        secondDrone.setSerialNumber("A002");
+        secondDrone.setDroneModel(droneModel);
+        secondDrone.setStatus("AVAILABLE");
+        secondDrone.setBatteryLevel(new BigDecimal("80.00"));
+        secondDrone.setTotalFlightHours(new BigDecimal("25.00"));
+
+        droneRepository.save(firstDrone);
+        droneRepository.save(secondDrone);
+
+        List<Drone> drones = droneService.getAllDrones();
+
+        assertNotNull(drones);
+        assertEquals(2, drones.size());
+
+        assertTrue(
+                drones.stream()
+                        .anyMatch(drone -> "A001".equals(drone.getSerialNumber()))
+        );
+
+        assertTrue(
+                drones.stream()
+                        .anyMatch(drone -> "A002".equals(drone.getSerialNumber()))
         );
     }
 }
