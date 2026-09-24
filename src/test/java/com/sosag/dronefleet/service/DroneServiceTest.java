@@ -40,15 +40,7 @@ class DroneServiceTest {
     @Test
     void shouldGetDroneById() {
 
-        DroneModel droneModel = new DroneModel();
-        droneModel.setManufacturer("DJI");
-        droneModel.setModelName("Mavic 3");
-        droneModel.setBatteryCapacity(5000);
-        droneModel.setMaxSpeed(new BigDecimal("20.00"));
-        droneModel.setMaxFlightTime(46);
-        droneModel.setMaxPayload(new BigDecimal("0.90"));
-
-        droneModel = droneModelRepository.save(droneModel);
+        DroneModel droneModel = createDroneModel();
 
         Drone drone = new Drone();
         drone.setSerialNumber("A001");
@@ -92,15 +84,7 @@ class DroneServiceTest {
     @Test
     void shouldGetAllDrones() {
 
-        DroneModel droneModel = new DroneModel();
-        droneModel.setManufacturer("DJI");
-        droneModel.setModelName("Mavic 3");
-        droneModel.setBatteryCapacity(5000);
-        droneModel.setMaxSpeed(new BigDecimal("20.00"));
-        droneModel.setMaxFlightTime(46);
-        droneModel.setMaxPayload(new BigDecimal("0.90"));
-
-        droneModel = droneModelRepository.save(droneModel);
+        DroneModel droneModel = createDroneModel();
 
         Drone firstDrone = new Drone();
         firstDrone.setSerialNumber("A001");
@@ -133,5 +117,77 @@ class DroneServiceTest {
                 drones.stream()
                         .anyMatch(drone -> "A002".equals(drone.getSerialNumber()))
         );
+    }
+
+    /**
+     * Verifies that the service automatically generates the first
+     * drone serial number when no drones exist.
+     */
+    @Test
+    void shouldGenerateFirstDroneSerialNumber() {
+
+        droneRepository.deleteAll();
+
+        DroneModel droneModel = createDroneModel();
+
+        Drone drone = new Drone();
+        drone.setDroneModel(droneModel);
+        drone.setStatus("AVAILABLE");
+        drone.setBatteryLevel(new BigDecimal("100.00"));
+        drone.setTotalFlightHours(BigDecimal.ZERO);
+
+        Drone savedDrone = droneService.createDrone(drone);
+
+        assertNotNull(savedDrone);
+        assertEquals("A001", savedDrone.getSerialNumber());
+    }
+
+    /**
+     * Verifies that the service generates the next serial number
+     * based on the last registered drone.
+     */
+    @Test
+    void shouldGenerateNextDroneSerialNumber() {
+
+        droneRepository.deleteAll();
+
+        DroneModel droneModel = createDroneModel();
+
+        Drone firstDrone = new Drone();
+        firstDrone.setDroneModel(droneModel);
+        firstDrone.setStatus("AVAILABLE");
+        firstDrone.setBatteryLevel(new BigDecimal("100.00"));
+        firstDrone.setTotalFlightHours(BigDecimal.ZERO);
+
+        Drone firstSavedDrone = droneService.createDrone(firstDrone);
+
+        Drone secondDrone = new Drone();
+        secondDrone.setDroneModel(droneModel);
+        secondDrone.setStatus("AVAILABLE");
+        secondDrone.setBatteryLevel(new BigDecimal("100.00"));
+        secondDrone.setTotalFlightHours(BigDecimal.ZERO);
+
+        Drone secondSavedDrone = droneService.createDrone(secondDrone);
+
+        assertEquals("A001", firstSavedDrone.getSerialNumber());
+        assertEquals("A002", secondSavedDrone.getSerialNumber());
+    }
+
+    /**
+     * Creates and persists a drone model used by the integration tests.
+     *
+     * @return persisted drone model
+     */
+    private DroneModel createDroneModel() {
+
+        DroneModel droneModel = new DroneModel();
+        droneModel.setManufacturer("DJI");
+        droneModel.setModelName("Mavic 3");
+        droneModel.setBatteryCapacity(5000);
+        droneModel.setMaxSpeed(new BigDecimal("20.00"));
+        droneModel.setMaxFlightTime(46);
+        droneModel.setMaxPayload(new BigDecimal("0.90"));
+
+        return droneModelRepository.save(droneModel);
     }
 }
