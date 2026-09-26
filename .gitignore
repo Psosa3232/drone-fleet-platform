@@ -14,3 +14,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+
+# Test configuration with credentials
+src/test/resources/application.properties
