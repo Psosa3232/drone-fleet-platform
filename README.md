@@ -210,16 +210,18 @@ drone-fleet-platform/
   - [x] Implement repository integration tests.
   - [x] Document JPA repositories and persistence testing.
 
-- [ ] **Phase 3 — Backend REST API**
+- [x] **Phase 3 — Backend REST API**
   - [x] Create initial service layer structure.
   - [x] Implement `DroneService`.
   - [x] Implement `getDroneById()`.
   - [x] Add `DroneNotFoundException`.
   - [x] Test service logic and database integration.
   - [x] Document the service layer.
-  - [ ] Implement REST controllers.
-  - [ ] Add input validation.
-  - [ ] Add global exception handling.
+  - [x] Implement REST controllers (`GET /api/v1/drones`, `GET /api/v1/drones/{id}`, `POST /api/v1/drones`).
+  - [x] Add input validation with `spring-boot-starter-validation` and `@Valid`.
+  - [x] Add global exception handling with RFC 7807 `ProblemDetail`.
+  - [x] Implement DTOs (`DroneRequestDTO`, `DroneResponseDTO`) to decouple API from domain model.
+  - [x] Add controller unit tests with `MockMvc` and `@WebMvcTest`.
   - [ ] Add API documentation with OpenAPI/Swagger.
 
 - [ ] **Phase 4 — Telemetry Generation & Storage**

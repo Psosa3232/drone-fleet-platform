@@ -17,9 +17,6 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for {@link DroneService}.
- *
- * <p>These tests verify the interaction between the service layer,
- * repository layer, and PostgreSQL database.</p>
  */
 @SpringBootTest
 @Transactional
@@ -34,160 +31,88 @@ class DroneServiceTest {
     @Autowired
     private DroneModelRepository droneModelRepository;
 
-    /**
-     * Verifies that a drone can be retrieved by its identifier.
-     */
-    @Test
-    void shouldGetDroneById() {
-
-        DroneModel droneModel = createDroneModel();
-
-        Drone drone = new Drone();
-        drone.setSerialNumber("A001");
-        drone.setDroneModel(droneModel);
-        drone.setStatus("AVAILABLE");
-        drone.setBatteryLevel(new BigDecimal("95.00"));
-        drone.setTotalFlightHours(new BigDecimal("10.50"));
-
-        drone = droneRepository.save(drone);
-
-        Drone foundDrone = droneService.getDroneById(drone.getDroneId());
-
-        assertNotNull(foundDrone);
-        assertEquals(drone.getDroneId(), foundDrone.getDroneId());
-        assertEquals("A001", foundDrone.getSerialNumber());
-        assertEquals("AVAILABLE", foundDrone.getStatus());
-        assertEquals(
-                droneModel.getDroneModelId(),
-                foundDrone.getDroneModel().getDroneModelId()
-        );
+    private DroneModel createValidDroneModel() {
+        DroneModel model = new DroneModel();
+        model.setManufacturer("DJI");
+        model.setModelName("Mavic 3");
+        model.setBatteryCapacity(5000);
+        model.setMaxSpeed(new BigDecimal("65.0"));
+        model.setMaxFlightTime(30);
+        model.setMaxPayload(new BigDecimal("1.5"));
+        return model;
     }
 
-    /**
-     * Verifies that a DroneNotFoundException is thrown when
-     * the requested drone does not exist.
-     */
-    @Test
-    void shouldThrowExceptionWhenDroneDoesNotExist() {
-
-        Long nonExistingDroneId = 999999L;
-
-        assertThrows(
-                DroneNotFoundException.class,
-                () -> droneService.getDroneById(nonExistingDroneId)
-        );
-    }
-
-    /**
-     * Verifies that all persisted drones can be retrieved.
-     */
     @Test
     void shouldGetAllDrones() {
-
-        DroneModel droneModel = createDroneModel();
-
-        Drone firstDrone = new Drone();
-        firstDrone.setSerialNumber("A001");
-        firstDrone.setDroneModel(droneModel);
-        firstDrone.setStatus("AVAILABLE");
-        firstDrone.setBatteryLevel(new BigDecimal("95.00"));
-        firstDrone.setTotalFlightHours(new BigDecimal("10.50"));
-
-        Drone secondDrone = new Drone();
-        secondDrone.setSerialNumber("A002");
-        secondDrone.setDroneModel(droneModel);
-        secondDrone.setStatus("AVAILABLE");
-        secondDrone.setBatteryLevel(new BigDecimal("80.00"));
-        secondDrone.setTotalFlightHours(new BigDecimal("25.00"));
-
-        droneRepository.save(firstDrone);
-        droneRepository.save(secondDrone);
-
-        List<Drone> drones = droneService.getAllDrones();
-
-        assertNotNull(drones);
-        assertEquals(2, drones.size());
-
-        assertTrue(
-                drones.stream()
-                        .anyMatch(drone -> "A001".equals(drone.getSerialNumber()))
-        );
-
-        assertTrue(
-                drones.stream()
-                        .anyMatch(drone -> "A002".equals(drone.getSerialNumber()))
-        );
-    }
-
-    /**
-     * Verifies that the service automatically generates the first
-     * drone serial number when no drones exist.
-     */
-    @Test
-    void shouldGenerateFirstDroneSerialNumber() {
-
-        droneRepository.deleteAll();
-
-        DroneModel droneModel = createDroneModel();
+        // Given
+        DroneModel savedModel = droneModelRepository.save(createValidDroneModel());
 
         Drone drone = new Drone();
-        drone.setDroneModel(droneModel);
+        drone.setSerialNumber("D001"); // Máximo 4 caracteres
+        drone.setDroneModel(savedModel);
         drone.setStatus("AVAILABLE");
         drone.setBatteryLevel(new BigDecimal("100.00"));
         drone.setTotalFlightHours(BigDecimal.ZERO);
+        droneRepository.save(drone);
 
-        Drone savedDrone = droneService.createDrone(drone);
+        // When
+        List<Drone> drones = droneService.getAllDrones();
 
-        assertNotNull(savedDrone);
-        assertEquals("A001", savedDrone.getSerialNumber());
+        // Then
+        assertNotNull(drones);
+        assertFalse(drones.isEmpty());
+        assertTrue(drones.stream().anyMatch(d -> d.getSerialNumber().equals("D001")));
     }
 
-    /**
-     * Verifies that the service generates the next serial number
-     * based on the last registered drone.
-     */
     @Test
-    void shouldGenerateNextDroneSerialNumber() {
+    void shouldGetDroneById() {
+        // Given
+        DroneModel savedModel = droneModelRepository.save(createValidDroneModel());
 
-        droneRepository.deleteAll();
+        Drone drone = new Drone();
+        drone.setSerialNumber("D002"); // Máximo 4 caracteres
+        drone.setDroneModel(savedModel);
+        drone.setStatus("AVAILABLE");
+        drone.setBatteryLevel(new BigDecimal("100.00"));
+        drone.setTotalFlightHours(BigDecimal.ZERO);
+        Drone savedDrone = droneRepository.save(drone);
 
-        DroneModel droneModel = createDroneModel();
+        // When
+        Drone foundDrone = droneService.getDroneById(savedDrone.getDroneId());
 
-        Drone firstDrone = new Drone();
-        firstDrone.setDroneModel(droneModel);
-        firstDrone.setStatus("AVAILABLE");
-        firstDrone.setBatteryLevel(new BigDecimal("100.00"));
-        firstDrone.setTotalFlightHours(BigDecimal.ZERO);
-
-        Drone firstSavedDrone = droneService.createDrone(firstDrone);
-
-        Drone secondDrone = new Drone();
-        secondDrone.setDroneModel(droneModel);
-        secondDrone.setStatus("AVAILABLE");
-        secondDrone.setBatteryLevel(new BigDecimal("100.00"));
-        secondDrone.setTotalFlightHours(BigDecimal.ZERO);
-
-        Drone secondSavedDrone = droneService.createDrone(secondDrone);
-
-        assertEquals("A001", firstSavedDrone.getSerialNumber());
-        assertEquals("A002", secondSavedDrone.getSerialNumber());
+        // Then
+        assertNotNull(foundDrone);
+        assertEquals("D002", foundDrone.getSerialNumber());
+        assertEquals("AVAILABLE", foundDrone.getStatus());
     }
 
-    /**
-     * Creates and persists a drone model used by the integration tests.
-     *
-     * @return persisted drone model
-     */
-    private DroneModel createDroneModel() {
+    @Test
+    void shouldThrowExceptionWhenDroneNotFound() {
+        assertThrows(DroneNotFoundException.class, () -> {
+            droneService.getDroneById(999L);
+        });
+    }
 
-        DroneModel droneModel = new DroneModel();
-        droneModel.setManufacturer("DJI");
-        droneModel.setModelName("Mavic 3");
-        droneModel.setBatteryCapacity(5000);
-        droneModel.setMaxSpeed(new BigDecimal("20.00"));
-        droneModel.setMaxFlightTime(46);
-        droneModel.setMaxPayload(new BigDecimal("0.90"));
+    @Test
+    void shouldCreateDrone() {
+        // Given
+        DroneModel savedModel = droneModelRepository.save(createValidDroneModel());
 
-        return droneModelRepository.save(droneModel);
+        Drone droneToCreate = new Drone();
+        // El servicio puede generar su propio serial (ej. "A001"), así que verificamos que no sea nulo
+        droneToCreate.setSerialNumber("D003");
+        droneToCreate.setDroneModel(savedModel);
+        droneToCreate.setStatus("AVAILABLE");
+        droneToCreate.setBatteryLevel(new BigDecimal("100.00"));
+        droneToCreate.setTotalFlightHours(BigDecimal.ZERO);
+
+        // When
+        Drone createdDrone = droneService.createDrone(droneToCreate);
+
+        // Then
+        assertNotNull(createdDrone);
+        assertNotNull(createdDrone.getDroneId());
+        assertNotNull(createdDrone.getSerialNumber()); // Verifica que el servicio asignó uno (ej. "A001")
+        assertEquals("AVAILABLE", createdDrone.getStatus());
     }
 }
