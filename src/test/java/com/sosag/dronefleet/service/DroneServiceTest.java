@@ -15,9 +15,6 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Integration tests for {@link DroneService}.
- */
 @SpringBootTest
 @Transactional
 class DroneServiceTest {
@@ -48,7 +45,7 @@ class DroneServiceTest {
         DroneModel savedModel = droneModelRepository.save(createValidDroneModel());
 
         Drone drone = new Drone();
-        drone.setSerialNumber("D001"); // Máximo 4 caracteres
+        drone.setSerialNumber("T001"); // Cambiado a T001 para evitar choque con datos manuales
         drone.setDroneModel(savedModel);
         drone.setStatus("AVAILABLE");
         drone.setBatteryLevel(new BigDecimal("100.00"));
@@ -61,7 +58,7 @@ class DroneServiceTest {
         // Then
         assertNotNull(drones);
         assertFalse(drones.isEmpty());
-        assertTrue(drones.stream().anyMatch(d -> d.getSerialNumber().equals("D001")));
+        assertTrue(drones.stream().anyMatch(d -> d.getSerialNumber().equals("T001")));
     }
 
     @Test
@@ -70,7 +67,7 @@ class DroneServiceTest {
         DroneModel savedModel = droneModelRepository.save(createValidDroneModel());
 
         Drone drone = new Drone();
-        drone.setSerialNumber("D002"); // Máximo 4 caracteres
+        drone.setSerialNumber("T002"); // Cambiado a T002
         drone.setDroneModel(savedModel);
         drone.setStatus("AVAILABLE");
         drone.setBatteryLevel(new BigDecimal("100.00"));
@@ -82,12 +79,13 @@ class DroneServiceTest {
 
         // Then
         assertNotNull(foundDrone);
-        assertEquals("D002", foundDrone.getSerialNumber());
+        assertEquals("T002", foundDrone.getSerialNumber());
         assertEquals("AVAILABLE", foundDrone.getStatus());
     }
 
     @Test
     void shouldThrowExceptionWhenDroneNotFound() {
+        // When & Then
         assertThrows(DroneNotFoundException.class, () -> {
             droneService.getDroneById(999L);
         });
@@ -99,8 +97,7 @@ class DroneServiceTest {
         DroneModel savedModel = droneModelRepository.save(createValidDroneModel());
 
         Drone droneToCreate = new Drone();
-        // El servicio puede generar su propio serial (ej. "A001"), así que verificamos que no sea nulo
-        droneToCreate.setSerialNumber("D003");
+        droneToCreate.setSerialNumber("T003"); // Cambiado a T003
         droneToCreate.setDroneModel(savedModel);
         droneToCreate.setStatus("AVAILABLE");
         droneToCreate.setBatteryLevel(new BigDecimal("100.00"));
@@ -112,7 +109,7 @@ class DroneServiceTest {
         // Then
         assertNotNull(createdDrone);
         assertNotNull(createdDrone.getDroneId());
-        assertNotNull(createdDrone.getSerialNumber()); // Verifica que el servicio asignó uno (ej. "A001")
+        assertNotNull(createdDrone.getSerialNumber());
         assertEquals("AVAILABLE", createdDrone.getStatus());
     }
 }
