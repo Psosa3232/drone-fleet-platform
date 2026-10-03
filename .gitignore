@@ -16,10 +16,6 @@ Thumbs.db
 *.log
 
 
-# Test configuration with credentials
-src/test/resources/application.properties
-
-
 # Spring Boot configuration with real credentials
 src/main/resources/application.properties
 src/test/resources/application.properties
@@ -30,4 +26,8 @@ scripts/venv/
 scripts/output/
 __pycache__/
 *.pyc
+
+
+# Docker
+.docker/
 
