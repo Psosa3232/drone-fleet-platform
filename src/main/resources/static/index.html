@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drone Fleet Platform - Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="bi bi-airplane-engines"></i> Drone Fleet Platform
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" data-section="drones">
+                            <i class="bi bi-grid-3x3-gap"></i> Drones
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="maintenance">
+                            <i class="bi bi-tools"></i> Maintenance
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="telemetry">
+                            <i class="bi bi-graph-up"></i> Telemetry
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-section="ml">
+                            <i class="bi bi-cpu"></i> ML Predictions
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-4">
+        <!-- Drones Section -->
+        <div id="drones-section" class="section">
+            <h2 class="mb-4"><i class="bi bi-grid-3x3-gap"></i> Fleet Overview</h2>
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Drones</h5>
+                            <h2 id="total-drones">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Available</h5>
+                            <h2 id="available-drones">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-dark">
+                        <div class="card-body">
+                            <h5 class="card-title">In Mission</h5>
+                            <h2 id="mission-drones">0</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Needs Maintenance</h5>
+                            <h2 id="maintenance-drones">0</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Drone List</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Serial Number</th>
+                                <th>Model</th>
+                                <th>Status</th>
+                                <th>Battery</th>
+                                <th>Flight Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody id="drones-table-body">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maintenance Section -->
+        <div id="maintenance-section" class="section d-none">
+            <h2 class="mb-4"><i class="bi bi-tools"></i> Drones Needing Maintenance</h2>
+            <div class="card">
+                <div class="card-body">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Serial Number</th>
+                                <th>Model</th>
+                                <th>Status</th>
+                                <th>Battery</th>
+                                <th>Flight Hours</th>
+                            </tr>
+                        </thead>
+                        <tbody id="maintenance-table-body">
+                            <!-- Dynamic content -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Telemetry Section -->
+        <div id="telemetry-section" class="section d-none">
+            <h2 class="mb-4"><i class="bi bi-graph-up"></i> Real-Time Telemetry</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Select Drone</h5>
+                        </div>
+                        <div class="card-body">
+                            <select id="drone-select" class="form-select">
+                                <option value="">Choose a drone...</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Live Data</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="telemetry-data">
+                                <p class="text-muted">Select a drone to view real-time data</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ML Predictions Section -->
+        <div id="ml-section" class="section d-none">
+            <h2 class="mb-4"><i class="bi bi-cpu"></i> Battery Prediction (ML)</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Input Flight Parameters</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="prediction-form">
+                                <div class="mb-3">
+                                    <label for="speed" class="form-label">Speed (m/s)</label>
+                                    <input type="number" class="form-control" id="speed" step="0.1" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="altitude" class="form-label">Altitude (m)</label>
+                                    <input type="number" class="form-control" id="altitude" step="0.1" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="temperature" class="form-label">Temperature (°C)</label>
+                                    <input type="number" class="form-control" id="temperature" step="0.1" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="distance" class="form-label">Distance from Start (m)</label>
+                                    <input type="number" class="form-control" id="distance" step="0.1" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="bi bi-cpu"></i> Predict Battery Level
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Prediction Result</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="prediction-result">
+                                <p class="text-muted">Fill the form and submit to get a prediction</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>
