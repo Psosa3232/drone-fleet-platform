@@ -30,50 +30,45 @@ Development follows a progressive approach, starting with the core backend and d
 
 ---
 
-## System Architecture
+### System Architecture
 
-The project follows an end-to-end data flow from real-time generation to analytical reporting, utilizing a dual-storage architecture:
+The project follows an end-to-end data flow from real-time generation to analytical reporting and ML inference, utilizing a microservices architecture:
 
 ```text
                +-----------------------+
-               |   Drone Simulation    |
-               |   (Python Pipeline)   |
+               |   Web Dashboard       |
+               | (HTML/JS/Bootstrap)   |
                +-----------+-----------+
                            |
                            v
                +-----------------------+
                |   Java / Spring Boot  |
+               |    (API Gateway)      |
                +---+---------------+---+
                    |               |
+          (Historical)             | (ML Proxy)
                    v               v
     +------------------+   +-------------------+
-    |    PostgreSQL    |   |       Redis       |
-    |  (Historical)    |   |  (Real-time)      |
+    |    PostgreSQL    |   |  Flask Microsvc   |
+    |  (Relational)    |   |   (Port 5000)     |
+    +--------+---------+   +--------+----------+
+             |                      |
+             v                      v
+    +------------------+   +-------------------+
+    | Python ETL &     |   | Scikit-Learn      |
+    | Telemetry Gen    |   | Model (.pkl)      |
     +--------+---------+   +-------------------+
              |
              v
     +------------------+
-    | Data Engineering |
-    +--------+---------+
-             |
-             v
-    +------------------+
-    |  Data Analysis   |
-    +--------+---------+
-             |
-             v
-    +------------------+
-    | Machine Learning |
-    +--------+---------+
-             |
-             v
-    +------------------+
-    |     Power BI     |
+    |       Redis      |
+    |  (Real-time)     |
     +------------------+
 ```
 
 - **PostgreSQL** serves as the core persistent store for entity models and historical telemetry, optimized for complex queries and analytics.
 - **Redis** provides fast, low-latency access to the current real-time state of the fleet (position, battery, speed) for live dashboards.
+- **Flask Microservice** hosts the trained Scikit-Learn model, exposing a REST API for real-time battery predictions, proxied by Spring Boot.
 
 ---
 
@@ -85,6 +80,7 @@ The project follows an end-to-end data flow from real-time generation to analyti
 | **Database & Cache** | PostgreSQL 16, Redis 7, Spring Data Redis |
 | **Data Engineering** | Python 3, Pandas, NumPy, Psycopg2, Redis-py |
 | **Machine Learning** | Python, Scikit-learn, Feature Engineering, Predictive Modeling |
+| **Frontend** | HTML5, JavaScript (ES6+), Bootstrap 5, Fetch API |
 | **Data Visualization** | Power BI, DAX |
 | **DevOps & Tools** | Docker, Docker Compose, Git, GitHub, VS Code, DBeaver |
 
@@ -145,6 +141,17 @@ Historical telemetry data will be leveraged to solve predictive operational chal
 - **Battery Degradation Analysis:** Monitoring long-term health and cycle decay.
 - **Predictive Maintenance:** Detecting component wear prior to hardware failures.
 - **Anomaly Detection:** Flagging irregular signals or erratic flight behaviors.
+
+---
+
+---
+## Machine Learning Implementation
+
+The platform includes a complete ML pipeline for battery consumption prediction:
+
+1. **Training Pipeline (`scripts/train_model.py`)**: Extracts historical telemetry from PostgreSQL, engineers features (speed, altitude, temperature, distance), and trains a Random Forest Regressor. The model is evaluated using MAE and R² metrics, then serialized using `joblib`.
+2. **Inference Microservice (`scripts/ml_service.py`)**: A lightweight Flask application that loads the `.pkl` model into memory and exposes a `/predict` REST endpoint.
+3. **Backend Proxy**: Spring Boot acts as an API Gateway, forwarding prediction requests from the web dashboard to the Python microservice, ensuring a unified API experience for the frontend.
 
 ---
 
@@ -235,10 +242,17 @@ drone-fleet-platform/
   - Create multi-stage Dockerfile for Java application.
   - Configure Docker Compose for App, PostgreSQL, and Redis.
 
-- [ ] **Phase 7 — Machine Learning Model Training**
-  - Train, evaluate, and export predictive models for battery and maintenance insights.
+- - [x] **Phase 7 — Machine Learning Model Training**
+  - [x] Build Python ETL script to extract historical data.
+  - [x] Train, evaluate (MAE, R²), and export Random Forest model using Scikit-learn.
+  - [x] Deploy model via Flask microservice for real-time inference.
 
-- [ ] **Phase 8 — Power BI Analytics**
+- [x] **Phase 8 — Web Dashboard & Analytics**
+  - [x] Develop Single Page Application (SPA) dashboard with Bootstrap.
+  - [x] Integrate real-time telemetry visualization from Redis.
+  - [x] Connect ML prediction endpoint to the web interface.
+
+- [ ] **Phase 9 — Power BI Analytics**
   - Connect analytical data sources and design fleet management dashboards.
 
 ---
@@ -277,6 +291,17 @@ drone-fleet-platform/
    python generate_data.py
    ```
 
+
+
+### Running the ML Microservice (Optional)
+To enable battery predictions in the web dashboard, run the Flask inference service in a separate terminal:
+
+```bash
+cd scripts
+source venv/bin/activate
+pip install -r requirements.txt
+python ml_service.py
+
 ---
 
 ## Future Versions
@@ -290,6 +315,8 @@ The current Python-based data pipeline will be extended with:
 - Staging, intermediate, and analytical data models.
 - Automated data quality tests and scheduled pipeline execution.
 
+
+Note: Ensure battery_prediction_model.pkl exists in the scripts/ directory (generated by running python train_model.py).
 ---
 
 ## Contact
