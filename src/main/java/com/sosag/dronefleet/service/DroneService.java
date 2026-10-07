@@ -2,30 +2,37 @@ package com.sosag.dronefleet.service;
 
 import com.sosag.dronefleet.exception.DroneNotFoundException;
 import com.sosag.dronefleet.model.Drone;
+import com.sosag.dronefleet.model.Maintenance;
 import com.sosag.dronefleet.repository.DroneRepository;
+import com.sosag.dronefleet.repository.MaintenanceRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Service responsible for managing drone-related business operations.
  *
  * <p>This service acts as an intermediate layer between the REST controllers
- * and the persistence layer. It uses {@link DroneRepository} to access
- * drone data stored in PostgreSQL.</p>
+ * and the persistence layer. It uses {@link DroneRepository} and 
+ * {@link MaintenanceRepository} to access data stored in PostgreSQL.</p>
  */
 @Service
 public class DroneService {
 
     private final DroneRepository droneRepository;
+    private final MaintenanceRepository maintenanceRepository;
 
     /**
-     * Creates a new DroneService with the required repository dependency.
+     * Creates a new DroneService with the required repository dependencies.
      *
      * @param droneRepository repository used to access drone data
+     * @param maintenanceRepository repository used to access maintenance data
      */
-    public DroneService(DroneRepository droneRepository) {
+    public DroneService(DroneRepository droneRepository, MaintenanceRepository maintenanceRepository) {
         this.droneRepository = droneRepository;
+        this.maintenanceRepository = maintenanceRepository;
     }
 
     /**
@@ -81,6 +88,31 @@ public class DroneService {
         drone.setSerialNumber(serialNumber);
 
         return droneRepository.save(drone);
+    }
+
+    /**
+     * Retrieves all drones that require maintenance attention.
+     *
+     * <p>This method identifies drones with pending or scheduled maintenance
+     * records by querying the Maintenance table first, enabling proactive 
+     * fleet management.</p>
+     *
+     * @return list of drones needing maintenance
+     */
+    public List<Drone> getDronesNeedingMaintenance() {
+        List<Maintenance> pendingMaintenances = maintenanceRepository.findPendingOrScheduledMaintenances();
+        
+        // Extrae los IDs de drones únicos de los mantenimientos pendientes
+        Set<Long> droneIds = pendingMaintenances.stream()
+                .map(m -> m.getDrone().getDroneId())
+                .collect(Collectors.toSet());
+        
+        // Busca los drones por esos IDs (si no hay IDs, devuelve lista vacía)
+        if (droneIds.isEmpty()) {
+            return List.of();
+        }
+        
+        return droneRepository.findAllById(droneIds);
     }
 
     /**

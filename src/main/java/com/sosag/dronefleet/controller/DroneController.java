@@ -79,4 +79,21 @@ public class DroneController {
         Drone savedDrone = droneService.createDrone(newDrone);
         return ResponseEntity.status(HttpStatus.CREATED).body(DroneResponseDTO.fromEntity(savedDrone));
     }
+
+    @GetMapping("/maintenance-needed")
+    @Operation(
+            summary = "Get drones needing maintenance",
+            description = "Returns a list of drones that have pending or scheduled maintenance records based on business logic."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Successfully retrieved the list of drones needing maintenance"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
+    })
+    public ResponseEntity<List<DroneResponseDTO>> getDronesNeedingMaintenance() {
+        List<Drone> drones = droneService.getDronesNeedingMaintenance();
+        List<DroneResponseDTO> response = drones.stream()
+                .map(DroneResponseDTO::fromEntity)
+                .toList();
+        return ResponseEntity.ok(response);
+    }
 }
