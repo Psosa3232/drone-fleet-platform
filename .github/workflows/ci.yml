@@ -59,3 +59,5 @@ jobs:
         SPRING_DATASOURCE_PASSWORD: testpass
         SPRING_DATA_REDIS_HOST: localhost
         SPRING_DATA_REDIS_PORT: 6379
+        # IMPORTANT: Automatically create tables from JPA entities for testing
+        SPRING_JPA_HIBERNATE_DDL_AUTO: create-drop
