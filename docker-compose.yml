@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Database Service
+  # PostgreSQL Database Service
   db:
     image: postgres:16-alpine
     container_name: drone_fleet_db
@@ -16,6 +16,15 @@ services:
     networks:
       - drone-network
 
+  # Redis Cache Service for real-time state
+  redis:
+    image: redis:7-alpine
+    container_name: drone_fleet_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - drone-network
+
   # Spring Boot Application Service
   app:
     build: .
@@ -23,13 +32,16 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # These environment variables override your local application.properties inside the container
+      # These environment variables override application.properties inside the container
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/drone_fleet
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: 5512
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
     depends_on:
       - db
+      - redis
     networks:
       - drone-network
 

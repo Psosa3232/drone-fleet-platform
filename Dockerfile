@@ -1,4 +1,4 @@
-# Stage 1: Build
+# Stage 1: Build the application
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
 
@@ -6,11 +6,11 @@ WORKDIR /app
 COPY pom.xml .
 RUN mvn dependency:go-offline -B
 
-# Copy source code and compile the project, skipping tests (since we run them locally)
+# Copy source code and compile the project, skipping tests (tests are run locally)
 COPY src ./src
 RUN mvn package -DskipTests
 
-# Stage 2: Run
+# Stage 2: Run the application
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 

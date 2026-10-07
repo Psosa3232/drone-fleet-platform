@@ -3,6 +3,8 @@ generate_data.py - Drone telemetry data generator.
 
 Generates realistic telemetry data based on the ranges configured in config.py
 and inserts it into PostgreSQL, respecting the DroneTelemetry entity structure.
+Additionally, it updates the real-time state of each drone in Redis for
+low-latency consumption by the backend API.
 """
 
 import pandas as pd
@@ -12,52 +14,57 @@ from psycopg2.extras import execute_values
 from datetime import datetime, timedelta
 import os
 import sys
+import redis
 
 # Import configuration
-from config import RANGES, NUM_DRONES, NUM_MISSIONS, RECORDS_PER_MISSION, INTERVAL_SECONDS, DB_CONFIG, OUTPUT_DIR
+from config import RANGES, NUM_DRONES, NUM_MISSIONS, RECORDS_PER_MISSION, INTERVAL_SECONDS, DB_CONFIG, REDIS_CONFIG, OUTPUT_DIR
 
 
 def generate_telemetry_data():
     """
     Generates realistic telemetry data within configured ranges.
-    Simulates real drone behavior (takeoff, cruise, return, landing).
+    Simulates real drone behavior with distinct flight phases:
+    pre-flight, takeoff, cruise, return, and landing.
+
+    Returns:
+        pd.DataFrame: A DataFrame containing the generated telemetry records.
     """
     print("Generating telemetry data...")
     print(f"   {NUM_DRONES} drones x {NUM_MISSIONS} missions x {RECORDS_PER_MISSION} records")
     print(f"   Total expected: {NUM_DRONES * NUM_MISSIONS * RECORDS_PER_MISSION} records")
     print()
-    
+
     data = []
-    
+
     for mission_idx in range(1, NUM_MISSIONS + 1):
-        # Assign drone to mission (rotating)
+        # Assign drone to mission (rotating assignment)
         drone_id = ((mission_idx - 1) % NUM_DRONES) + 1
-        
-        # Random starting point within lat/lon range
+
+        # Random starting point within configured lat/lon range
         start_lat = np.random.uniform(RANGES["latitude"]["min"], RANGES["latitude"]["max"])
         start_lon = np.random.uniform(RANGES["longitude"]["min"], RANGES["longitude"]["max"])
-        
+
         current_lat = start_lat
         current_lon = start_lon
-        
+
         # Initial state
         battery = 100.0
         altitude = 0.0
         speed = 0.0
         temperature = np.random.uniform(RANGES["temperature"]["min"], RANGES["temperature"]["min"] + 5)
         distance_from_start = 0.0
-        
-        # Mission start time (missions on different days)
+
+        # Mission start time (missions spread across different days)
         mission_start = datetime.now() - timedelta(days=NUM_MISSIONS - mission_idx, hours=8)
         current_time = mission_start
-        
+
         # Flight phases: 0=pre-flight, 1=takeoff, 2=cruise, 3=return, 4=landing
         flight_phase = 0
-        
+
         for record_idx in range(RECORDS_PER_MISSION):
             current_time += timedelta(seconds=INTERVAL_SECONDS)
-            
-            # Phase transitions
+
+            # Phase transitions based on record index
             if record_idx == 0:
                 flight_phase = 1  # Takeoff
             elif record_idx == 20:
@@ -66,41 +73,41 @@ def generate_telemetry_data():
                 flight_phase = 3  # Return
             elif record_idx >= RECORDS_PER_MISSION - 10:
                 flight_phase = 4  # Landing
-            
+
             # === PHASE-BASED SIMULATION ===
-            
+
             if flight_phase == 1:  # TAKEOFF
                 altitude += np.random.uniform(2, 5)
                 altitude = min(altitude, RANGES["altitude"]["max"] * 0.8)
                 speed += np.random.uniform(1, 3)
                 battery -= np.random.uniform(0.3, 0.6)
                 temperature += np.random.uniform(1, 3)
-                
+
             elif flight_phase == 2:  # CRUISE
                 # Realistic movement (random walk)
                 current_lat += np.random.uniform(-0.0008, 0.0008)
                 current_lon += np.random.uniform(-0.0008, 0.0008)
-                
-                # Keep within ranges
+
+                # Keep within configured ranges
                 current_lat = np.clip(current_lat, RANGES["latitude"]["min"], RANGES["latitude"]["max"])
                 current_lon = np.clip(current_lon, RANGES["longitude"]["min"], RANGES["longitude"]["max"])
-                
+
                 altitude = 80 + np.random.uniform(-15, 15)
                 speed = 45 + np.random.uniform(-10, 10)
                 battery -= np.random.uniform(0.15, 0.25)
                 temperature = 45 + np.random.uniform(-5, 5)
-                
+
             elif flight_phase == 3:  # RETURN
                 # Return to starting point
                 lat_diff = start_lat - current_lat
                 lon_diff = start_lon - current_lon
                 current_lat += lat_diff * 0.05
                 current_lon += lon_diff * 0.05
-                
+
                 altitude = 70 + np.random.uniform(-10, 10)
                 speed = 55 + np.random.uniform(-5, 5)
                 battery -= np.random.uniform(0.2, 0.3)
-                
+
             elif flight_phase == 4:  # LANDING
                 altitude -= np.random.uniform(3, 8)
                 altitude = max(0, altitude)
@@ -108,24 +115,24 @@ def generate_telemetry_data():
                 speed = max(0, speed)
                 battery -= np.random.uniform(0.1, 0.2)
                 temperature -= np.random.uniform(1, 2)
-            
+
             # Calculate distance from start (simplified Haversine formula)
             lat_diff = current_lat - start_lat
             lon_diff = current_lon - start_lon
             distance_from_start = np.sqrt(lat_diff**2 + lon_diff**2) * 111000  # in meters
-            
-            # Add realistic noise (like in real Kaggle datasets)
+
+            # Add realistic noise (similar to real Kaggle datasets)
             latitude_noisy = current_lat + np.random.normal(0, 0.00001)
             longitude_noisy = current_lon + np.random.normal(0, 0.00001)
-            
+
             # Ensure battery does not go below 0
             battery = max(0, battery)
-            
-            # Ensure all values are within ranges
+
+            # Ensure all values are within configured ranges
             altitude = max(RANGES["altitude"]["min"], min(RANGES["altitude"]["max"], altitude))
             speed = max(RANGES["speed"]["min"], min(RANGES["speed"]["max"], speed))
             temperature = max(RANGES["temperature"]["min"], min(RANGES["temperature"]["max"], temperature))
-            
+
             data.append({
                 "drone_id": drone_id,
                 "mission_id": mission_idx,
@@ -138,7 +145,7 @@ def generate_telemetry_data():
                 "temperature": round(temperature, 1),
                 "distance_from_start": round(distance_from_start, 1)
             })
-    
+
     df = pd.DataFrame(data)
     print(f"Data generated: {len(df)} records")
     return df
@@ -146,13 +153,19 @@ def generate_telemetry_data():
 
 def calculate_statistics(df):
     """
-    Calculates descriptive statistics and ranges for each metric.
+    Calculates descriptive statistics and ranges for each telemetry metric.
+
+    Args:
+        df (pd.DataFrame): The telemetry DataFrame.
+
+    Returns:
+        dict: A dictionary containing statistics for each metric.
     """
     print("\nDESCRIPTIVE STATISTICS")
     print("=" * 70)
-    
+
     metrics = ["altitude", "speed", "battery_level", "temperature", "distance_from_start"]
-    
+
     stats = {}
     for metric in metrics:
         col = df[metric]
@@ -166,7 +179,7 @@ def calculate_statistics(df):
             "p75": col.quantile(0.75),
             "range": col.max() - col.min()
         }
-        
+
         print(f"\n{metric.upper().replace('_', ' ')}:")
         print(f"   Minimum:    {stats[metric]['min']:>10.2f}")
         print(f"   Maximum:    {stats[metric]['max']:>10.2f}")
@@ -176,85 +189,153 @@ def calculate_statistics(df):
         print(f"   P25:        {stats[metric]['p25']:>10.2f}")
         print(f"   P75:        {stats[metric]['p75']:>10.2f}")
         print(f"   Range:      {stats[metric]['range']:>10.2f}")
-    
+
     return stats
 
 
 def insert_into_postgresql(df):
     """
-    Inserts data into the drone_telemetry table in PostgreSQL.
-    Requires that drones and missions exist in the database.
+    Inserts telemetry data into the drone_telemetry table in PostgreSQL.
+    Requires that drones and missions already exist in the database.
+
+    Args:
+        df (pd.DataFrame): The telemetry DataFrame to insert.
+
+    Returns:
+        bool: True if insertion was successful, False otherwise.
     """
     print("\nConnecting to PostgreSQL...")
-    
+
+    conn = None
     try:
         conn = psycopg2.connect(**DB_CONFIG)
         cursor = conn.cursor()
-        
+
         # Verify that drones exist
         cursor.execute("SELECT drone_id FROM drones LIMIT 1")
         if not cursor.fetchone():
             print("No drones in database. Insert drones first.")
             return False
-        
+
         # Verify that missions exist
         cursor.execute("SELECT mission_id FROM missions LIMIT 1")
         if not cursor.fetchone():
             print("No missions in database. Insert missions first.")
             return False
-        
+
         # Filter only valid records
         df_valid = df[df["drone_id"].isin(range(1, NUM_DRONES + 1))]
-        
+
         print(f"Inserting {len(df_valid)} records...")
-        
-        # Bulk insert
+
+        # Bulk insert using execute_values for performance
         insert_query = """
             INSERT INTO drone_telemetry 
             (drone_id, mission_id, timestamp, latitude, longitude, 
              altitude, speed, battery_level, temperature, distance_from_start)
             VALUES %s
         """
-        
+
         records = [tuple(x) for x in df_valid.to_numpy()]
         execute_values(cursor, insert_query, records)
         conn.commit()
-        
-        # Verify
+
+        # Verify insertion
         cursor.execute("SELECT COUNT(*) FROM drone_telemetry")
         total = cursor.fetchone()[0]
         print(f"Inserted. Total in database: {total} records")
-        
+
         return True
-        
+
     except Exception as e:
         print(f"Error: {e}")
         return False
     finally:
-        if 'conn' in locals():
+        if conn is not None:
             cursor.close()
             conn.close()
 
 
+def update_redis_state(df):
+    """
+    Updates the real-time state of each drone in Redis.
+    Uses the latest telemetry record for each drone to maintain
+    a low-latency view of the fleet status.
+
+    Args:
+        df (pd.DataFrame): The telemetry DataFrame.
+    """
+    print("\nConnecting to Redis for real-time updates...")
+
+    try:
+        r = redis.Redis(
+            host=REDIS_CONFIG["host"],
+            port=REDIS_CONFIG["port"],
+            db=REDIS_CONFIG["db"],
+            decode_responses=True
+        )
+
+        # Test connection
+        r.ping()
+        print("Connected to Redis successfully.")
+
+        # Get the latest record for each drone
+        latest_records = df.sort_values("timestamp").groupby("drone_id").last()
+
+        print(f"Updating real-time state for {len(latest_records)} drones...")
+
+        for drone_id, record in latest_records.iterrows():
+            key = f"drone:D{int(drone_id):03d}:state"
+            state = {
+                "drone_id": str(int(drone_id)),
+                "mission_id": str(int(record["mission_id"])),
+                "latitude": str(record["latitude"]),
+                "longitude": str(record["longitude"]),
+                "altitude": str(record["altitude"]),
+                "speed": str(record["speed"]),
+                "battery_level": str(record["battery_level"]),
+                "temperature": str(record["temperature"]),
+                "distance_from_start": str(record["distance_from_start"]),
+                "status": "IN_MISSION",
+                "last_update": record["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
+            }
+
+            r.hset(key, mapping=state)
+            # Expire key after 1 hour if drone stops reporting
+            r.expire(key, 3600)
+
+        print(f"Redis state updated for {len(latest_records)} drones.")
+
+    except redis.ConnectionError as e:
+        print(f"Redis connection error: {e}")
+    except Exception as e:
+        print(f"Redis error: {e}")
+
+
 def export_to_csv(df, stats):
     """
-    Exports data and statistics to CSV for Power BI.
+    Exports telemetry data and statistics to CSV files for external
+    consumption (e.g., Power BI, analytics tools).
+
+    Args:
+        df (pd.DataFrame): The telemetry DataFrame.
+        stats (dict): The calculated statistics dictionary.
     """
     print("\nExporting to CSV...")
-    
+
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    
+
     # Data CSV
     data_path = os.path.join(OUTPUT_DIR, "telemetry_data.csv")
     df.to_csv(data_path, index=False)
     print(f"   Data: {data_path}")
-    
+
     # Statistics CSV
     stats_path = os.path.join(OUTPUT_DIR, "telemetry_statistics.csv")
     stats_df = pd.DataFrame(stats).T
     stats_df.to_csv(stats_path)
     print(f"   Statistics: {stats_path}")
-    
+
     # Configured ranges CSV
     ranges_path = os.path.join(OUTPUT_DIR, "configured_ranges.csv")
     ranges_df = pd.DataFrame(RANGES).T
@@ -263,25 +344,35 @@ def export_to_csv(df, stats):
 
 
 def main():
+    """
+    Main entry point for the telemetry data generator pipeline.
+    Orchestrates data generation, statistics calculation, CSV export,
+    PostgreSQL insertion, and Redis state updates.
+    """
     print("=" * 70)
     print("DRONE FLEET - TELEMETRY DATA GENERATOR")
     print("=" * 70)
     print()
-    
+
     # 1. Generate data
     df = generate_telemetry_data()
-    
+
     # 2. Calculate statistics
     stats = calculate_statistics(df)
-    
+
     # 3. Export to CSV
     export_to_csv(df, stats)
-    
+
     # 4. Insert into PostgreSQL (optional)
     insert_answer = input("\nInsert into PostgreSQL? (y/n): ").lower()
     if insert_answer == 'y':
         insert_into_postgresql(df)
-    
+
+    # 5. Update Redis with real-time state
+    redis_answer = input("\nUpdate Redis with real-time state? (y/n): ").lower()
+    if redis_answer == 'y':
+        update_redis_state(df)
+
     print("\n" + "=" * 70)
     print("PIPELINE COMPLETED")
     print("=" * 70)
@@ -289,7 +380,7 @@ def main():
     print("   - telemetry_data.csv (for Power BI)")
     print("   - telemetry_statistics.csv")
     print("   - configured_ranges.csv")
-    print("\nNext step: Import into Power BI")
+    print("\nNext step: Import into Power BI or query Redis for real-time data")
 
 
 if __name__ == "__main__":
