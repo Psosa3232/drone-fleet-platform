@@ -8,9 +8,9 @@ The project combines backend development, relational databases, data engineering
 
 ## Overview
 
-The platform is being developed as a realistic drone fleet management system. Its primary purpose is to manage drones and their operations while generating and processing telemetry data that serves as the foundation for advanced analytics and predictive models.
+The platform is developed as a realistic drone fleet management system. Its primary purpose is to manage drones and their operations while generating and processing telemetry data that serves as the foundation for advanced analytics and predictive models.
 
-Development follows a progressive approach, starting with the core backend and database layer, then extending into data pipelines, machine learning, and business intelligence.
+Development follows a progressive approach, starting with the core backend and database layer, then extending into data pipelines, real-time caching, machine learning, and business intelligence.
 
 ---
 
@@ -20,22 +20,24 @@ Development follows a progressive approach, starting with the core backend and d
 - **Relational Storage:** Design and manage a relational database with PostgreSQL and JPA/Hibernate.
 - **Domain Modeling:** Model drones, missions, pilots, batteries, telemetry, and maintenance operations.
 - **Telemetry Processing:** Generate and persist realistic time-series drone telemetry data.
-- **In-Memory Caching:** Develop a custom in-memory caching layer inspired by key-value stores like Redis.
+- **Dual-Storage Architecture:** Implement Redis for low-latency real-time state and PostgreSQL for historical analytics.
 - **Data Engineering:** Build ETL data processing pipelines using Python and Pandas.
 - **Exploratory Data Analysis (EDA):** Perform statistical analysis on historical telemetry.
 - **Machine Learning:** Develop predictive models for battery consumption, maintenance, and flight estimations using Scikit-learn.
 - **Data Visualization:** Design interactive dashboards and operational KPIs in Power BI.
-- **Best Practices:** Apply modern software engineering and data pipeline practices throughout the application lifecycle.
+- **Containerization:** Package the application and database using Docker and Docker Compose.
+- **Best Practices:** Apply modern software engineering, security, and data pipeline practices throughout the application lifecycle.
 
 ---
 
 ## System Architecture
 
-The project follows an end-to-end data flow from real-time generation to analytical reporting:
+The project follows an end-to-end data flow from real-time generation to analytical reporting, utilizing a dual-storage architecture:
 
 ```text
                +-----------------------+
                |   Drone Simulation    |
+               |   (Python Pipeline)   |
                +-----------+-----------+
                            |
                            v
@@ -45,17 +47,13 @@ The project follows an end-to-end data flow from real-time generation to analyti
                    |               |
                    v               v
     +------------------+   +-------------------+
-    |    PostgreSQL    |   |  In-Memory Cache  |
+    |    PostgreSQL    |   |       Redis       |
+    |  (Historical)    |   |  (Real-time)      |
     +--------+---------+   +-------------------+
              |
              v
     +------------------+
     | Data Engineering |
-    +--------+---------+
-             |
-             v
-    +------------------+
-    | Python / Positron|
     +--------+---------+
              |
              v
@@ -74,8 +72,8 @@ The project follows an end-to-end data flow from real-time generation to analyti
     +------------------+
 ```
 
-- **PostgreSQL** serves as the core persistent store for entity models and historical telemetry.
-- **In-Memory Cache** provides fast access to frequently requested or real-time state data where latency is critical.
+- **PostgreSQL** serves as the core persistent store for entity models and historical telemetry, optimized for complex queries and analytics.
+- **Redis** provides fast, low-latency access to the current real-time state of the fleet (position, battery, speed) for live dashboards.
 
 ---
 
@@ -83,12 +81,12 @@ The project follows an end-to-end data flow from real-time generation to analyti
 
 | Domain | Technologies |
 | :--- | :--- |
-| **Backend** | Java 21, Spring Boot, Maven, Spring Data JPA, Hibernate, REST APIs |
-| **Database** | PostgreSQL, SQL, Relational Data Modeling |
-| **Data Engineering** | Python, Positron, Pandas, NumPy, Matplotlib, Data Pipelines |
+| **Backend** | Java 21, Spring Boot 3, Maven, Spring Data JPA, Hibernate, REST APIs |
+| **Database & Cache** | PostgreSQL 16, Redis 7, Spring Data Redis |
+| **Data Engineering** | Python 3, Pandas, NumPy, Psycopg2, Redis-py |
 | **Machine Learning** | Python, Scikit-learn, Feature Engineering, Predictive Modeling |
 | **Data Visualization** | Power BI, DAX |
-| **Tools & Version Control**| IntelliJ IDEA, Git, GitHub, PostgreSQL Tools |
+| **DevOps & Tools** | Docker, Docker Compose, Git, GitHub, VS Code, DBeaver |
 
 ---
 
@@ -99,7 +97,7 @@ The platform structures relationships between core operational entities:
 ```text
 Users ──> Missions <── Drones
              │
-             └──> Telemetry
+             ──> Telemetry
 
 Drones ──┬──> Maintenance
          └──> Telemetry
@@ -125,13 +123,13 @@ Each telemetry entry captures real-time operational metrics:
 Raw telemetry transitions progressively into structured analytical datasets:
 
 ```text
-Raw Telemetry ──> Ingestion ──> Cleaning ──> Transformation ──> Analytical Dataset
+Raw Telemetry ─> Ingestion ──> Cleaning ──> Transformation ──> Analytical Dataset
                                                                        │
                                               ┌────────────────────────┴────────────────────────┐
                                               ▼                                                 ▼
                                        Data Analysis                                     Machine Learning
                                               │                                                 │
-                                              └────────────────────────┬────────────────────────┘
+                                              ───────────────────────┬────────────────────────┘
                                                                        ▼
                                                                     Power BI
 ```
@@ -150,23 +148,15 @@ Historical telemetry data will be leveraged to solve predictive operational chal
 
 ---
 
-## In-Memory Cache
+## Real-Time Cache (Redis)
 
-A lightweight, custom in-memory key-value cache built in Java to minimize database reads for high-frequency queries.
+The platform utilizes Redis to manage the real-time state of the drone fleet, minimizing database reads for high-frequency queries.
 
-### Basic API Operations
-- `GET(key)`
-- `SET(key, value)`
-- `DELETE(key)`
-- `EXISTS(key)`
-- `CLEAR()`
-
-### Advanced Planned Features
-- TTL (Time-To-Live) & Expiration policies
-- Hit/Miss ratio tracking & Cache statistics
-- Memory eviction strategies
-- Thread-safe concurrent access controls
-- Performance benchmarking against direct PostgreSQL queries
+### Implementation Details
+- **Spring Data Redis:** Integrated via `RedisTemplate` with String serializers for human-readable inspection.
+- **Data Structure:** Uses Redis Hashes (`HSET`) to store the state of each drone (e.g., `drone:D001:state`).
+- **TTL (Time-To-Live):** Keys automatically expire after 1 hour if a drone stops reporting, preventing stale data accumulation.
+- **API Exposure:** Real-time endpoints (`/api/realtime/drones/{id}`) serve JSON responses in milliseconds directly from memory.
 
 ---
 
@@ -176,109 +166,134 @@ A lightweight, custom in-memory key-value cache built in Java to minimize databa
 drone-fleet-platform/
 │
 ├── docs/                      # Architectural decisions, benchmarks, and guides
+│   └── database/              # SQL scripts for schema and seed data
+│
+├── scripts/                   # Python data engineering pipeline
+│   ├── generate_data.py       # Telemetry generator and Redis/PostgreSQL writer
+│   ├── config.example.py      # Configuration template
+│   ├── requirements.txt       # Python dependencies
+│   ── output/                # Generated CSVs for Power BI
 │
 ├── src/
 │   ├── main/
 │   │   ├── java/
-│   │   │   └── com/
-│   │   │       └── sosag/
-│   │   │           └── dronefleet/
-│   │   │
+│   │   │   └── com/sosag/dronefleet/
+│   │   │       ├── config/    # Redis and OpenAPI configurations
+│   │   │       ├── controller/# REST API endpoints
+│   │   │       ├── service/   # Business logic and Real-time services
+│   │   │       ├── repository/# Data access layer
+│   │   │       ├── model/     # JPA entities
+│   │   │       └── exception/ # Global exception handling
 │   │   └── resources/
-│   │       └── application.properties
+│   │       └── application.properties.example
 │   │
 │   └── test/                  # Unit and integration tests
 │
 ├── .gitignore
+├── Dockerfile                 # Multi-stage build for Spring Boot
+├── docker-compose.yml         # Orchestrates App, PostgreSQL, and Redis
 ├── pom.xml
 └── README.md
 ```
 
--## Development Roadmap
+---
+
+## Development Roadmap
 
 - [x] **Phase 1 — Project Setup**
-  - [x] Create Spring Boot project using Java 21 and Maven.
-  - [x] Configure PostgreSQL database connection and environment variables.
-  - [x] Define initial domain entities.
-  - [x] Configure project structure and package organization.
-  - [x] Configure application properties.
+  - Create Spring Boot project using Java 21 and Maven.
+  - Configure PostgreSQL database connection and environment variables.
+  - Define initial domain entities.
+  - Configure project structure and package organization.
+  - Secure credentials using `.gitignore` and `.example` files.
 
 - [x] **Phase 2 — Database Layer**
-  - [x] Design relational schema and establish JPA relationships (`@ManyToOne`).
-  - [x] Create and configure database tables.
-  - [x] Configure repositories and persistence logic.
-  - [x] Implement repository integration tests.
-  - [x] Document JPA repositories and persistence testing.
+  - Design relational schema and establish JPA relationships.
+  - Create and configure database tables.
+  - Configure repositories and persistence logic.
+  - Implement repository integration tests.
 
 - [x] **Phase 3 — Backend REST API**
-  - [x] Create initial service layer structure.
-  - [x] Implement `DroneService`.
-  - [x] Implement `getDroneById()`.
-  - [x] Add `DroneNotFoundException`.
-  - [x] Test service logic and database integration.
-  - [x] Document the service layer.
-  - [x] Implement REST controllers (`GET /api/v1/drones`, `GET /api/v1/drones/{id}`, `POST /api/v1/drones`).
-  - [x] Add input validation with `spring-boot-starter-validation` and `@Valid`.
-  - [x] Add global exception handling with RFC 7807 `ProblemDetail`.
-  - [x] Implement DTOs (`DroneRequestDTO`, `DroneResponseDTO`) to decouple API from domain model.
-  - [x] Add controller unit tests with `MockMvc` and `@WebMvcTest`.
-  - [ ] Add API documentation with OpenAPI/Swagger.
+  - Create initial service layer structure.
+  - Implement `DroneService` and REST controllers.
+  - Add input validation and global exception handling.
+  - Implement DTOs to decouple API from domain model.
+  - Add API documentation with OpenAPI/Swagger.
 
-- [ ] **Phase 4 — Telemetry Generation & Storage**
-  - [x] Implement `DroneTelemetry` persistence model.
-  - [x] Implement telemetry repository and integration tests.
-  - [ ] Build telemetry simulation service for realistic time-series data.
-  - [ ] Optimize batch persistence and historical endpoints.
+- [x] **Phase 4 — Telemetry Generation & Storage**
+  - Implement `DroneTelemetry` persistence model.
+  - Build Python telemetry simulation service for realistic time-series data.
+  - Implement bulk insertion into PostgreSQL.
 
-- [ ] **Phase 5 — In-Memory Cache**
-  - [ ] Implement cache store with eviction, TTL, and concurrency handling.
-  - [ ] Benchmark performance against direct database access.
+- [x] **Phase 5 — Real-Time Cache (Redis)**
+  - Integrate Redis via Docker Compose.
+  - Implement Spring Data Redis configuration and services.
+  - Update Python pipeline to write real-time state to Redis.
+  - Expose real-time REST endpoints.
 
-- [ ] **Phase 6 — Data Engineering Pipeline**
-  - [ ] Build automated Python ETL scripts to extract, clean, transform, and output analytical datasets.
+- [x] **Phase 6 — Containerization**
+  - Create multi-stage Dockerfile for Java application.
+  - Configure Docker Compose for App, PostgreSQL, and Redis.
 
 - [ ] **Phase 7 — Machine Learning Model Training**
-  - [ ] Train, evaluate, and export predictive models for battery and maintenance insights.
+  - Train, evaluate, and export predictive models for battery and maintenance insights.
 
 - [ ] **Phase 8 — Power BI Analytics**
-  - [ ] Connect analytical data sources and design fleet management and operational dashboards.
-
-## Documentation
-
-Comprehensive project documentation is maintained inside the `docs/` folder, covering:
-
-- Architectural Decision Records (ADRs)
-- Database ER Diagrams
-- Data Pipeline Configurations
-- Machine Learning Experiment Logs
-- Cache Benchmarks & Performance Metrics
+  - Connect analytical data sources and design fleet management dashboards.
 
 ---
 
-## Project Status
+## Getting Started
 
-**Current Phase:** Initial Backend & Database Layer Development.
+### Prerequisites
+- Java 21 (OpenJDK)
+- Python 3.10+
+- Docker & Docker Compose
+- Maven 3.9+
 
-The Spring Boot baseline is configured using Java 21, Maven, and PostgreSQL.
-Domain entity design is underway, leading into JPA persistence implementation.
+### Running with Docker (Recommended)
+1. Clone the repository.
+2. Copy the example configuration and update your credentials:
+   ```bash
+   cp src/main/resources/application.properties.example src/main/resources/application.properties
+   ```
+3. Start the application, database, and cache:
+   ```bash
+   docker-compose up --build
+   ```
+4. Access the Swagger UI at: `http://localhost:8080/swagger-ui.html`
 
+### Running the Data Pipeline
+1. Navigate to the scripts directory:
+   ```bash
+   cd scripts
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   cp config.example.py config.py
+   ```
+2. Update `config.py` with your database credentials and run:
+   ```bash
+   python generate_data.py
+   ```
 
-
+---
 
 ## Future Versions
 
 ### Version 2 — Advanced Data Engineering
-
-A future version of the project will introduce a more advanced data
-engineering architecture using Apache Airflow and dbt.
+A future version of the project will introduce a more advanced data engineering architecture using Apache Airflow and dbt.
 
 The current Python-based data pipeline will be extended with:
-
 - Apache Airflow for workflow orchestration.
 - dbt for SQL-based data transformation and data modeling.
 - Staging, intermediate, and analytical data models.
-- Automated data quality tests.
-- Scheduled pipeline execution.
+- Automated data quality tests and scheduled pipeline execution.
 
-The objective is to evolve the initial data pipeline into a more
-production-oriented Data Engineering architecture.
+---
+
+## Contact
+
+**Developer:** Pablo Sosa  
+**GitHub:** github.com/Psosa3232  
+**Email:** pasogar04@gmail.com
