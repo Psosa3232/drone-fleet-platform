@@ -1,8 +1,11 @@
 """
-config.py - Configuration of ranges and parameters for drone telemetry generation.
+config.example.py - Configuration template for drone telemetry generation.
 
 This module defines the minimum and maximum values for each telemetry metric,
 simulating realistic data ranges based on Kaggle datasets for DJI/PX4 drones.
+
+IMPORTANT: Copy this file to config.py and fill in your actual credentials.
+NEVER commit config.py with real credentials to version control.
 """
 
 # ============================================================
@@ -65,14 +68,27 @@ RECORDS_PER_MISSION = 200   # Records per mission (every 30s = ~1.5h of flight)
 INTERVAL_SECONDS = 30       # Interval between records
 
 # ============================================================
-# DATABASE CONNECTION
+# DATABASE CONNECTION (PostgreSQL)
 # ============================================================
+# When running locally, use "localhost" as host.
+# When running inside Docker Compose, use "db" as host.
 DB_CONFIG = {
-    "host": "localhost",
+    "host": "YOUR_DB_HOST",          # e.g., "localhost" or "db" (Docker)
     "port": 5432,
-    "database": "drone_fleet",
-    "user": "postgres",
-    "password": 'PASSWORD'
+    "database": "YOUR_DB_NAME",      # e.g., "drone_fleet"
+    "user": "YOUR_DB_USER",          # e.g., "postgres"
+    "password": "YOUR_DB_PASSWORD"   # Your PostgreSQL password
+}
+
+# ============================================================
+# CACHE CONNECTION (Redis)
+# ============================================================
+# When running locally, use "localhost" as host.
+# When running inside Docker Compose, use "redis" as host.
+REDIS_CONFIG = {
+    "host": "YOUR_REDIS_HOST",       # e.g., "localhost" or "redis" (Docker)
+    "port": 6379,
+    "db": 0
 }
 
 # ============================================================

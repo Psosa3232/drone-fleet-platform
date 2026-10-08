@@ -36,3 +36,7 @@ __pycache__/
 
 # Machine Learning Models
 scripts/*.pkl
+src/main/resources/application.properties
+.env
+*.bak
+*.backup

@@ -302,7 +302,9 @@ source venv/bin/activate
 pip install -r requirements.txt
 python ml_service.py
 
+```
 ---
+
 
 ## Future Versions
 
