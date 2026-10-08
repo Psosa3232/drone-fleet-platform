@@ -133,22 +133,30 @@ Edit `config.py` with your database credentials, then run:
 ```bash
 python generate_data.py
 ```
+## IMPORTANT: Running the ML Microservice (Requires Two Terminals)
 
-### 6. Run the ML microservice (optional)
+The Machine Learning prediction feature runs as a separate Python microservice. To use the "ML Predictions" tab in the web dashboard, you **must keep two terminals open simultaneously**: one for the Spring Boot backend and one for the Flask ML service.
 
-First, train the model:
+**Terminal 1 - Spring Boot Backend** (Keep this running in the background):
 
-```bash
-python train_model.py
-```
+    mvn spring-boot:run
 
-Then start the Flask inference service:
+**Terminal 2 - Flask ML Microservice** (Open a new terminal tab or window):
 
-```bash
-python ml_service.py
-```
+    cd scripts
+    source venv/bin/activate
+    python ml_service.py
 
-The ML service will be available at http://localhost:5000
+Expected output in Terminal 2:
+
+    Loading ML model...
+    Model loaded successfully.
+    Starting ML Prediction Service on port 5000...
+     * Running on http://127.0.0.1:5000
+
+Once both services are running, open your browser at http://localhost:8080/index.html, navigate to the **ML Predictions** tab, fill in the flight parameters, and click **Predict Battery Level**.
+
+Note: In a production environment or when using Docker Compose in the future, this manual step is eliminated as all services are orchestrated together.
 
 ---
 
