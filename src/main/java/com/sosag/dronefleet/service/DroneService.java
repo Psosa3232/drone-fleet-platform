@@ -115,6 +115,21 @@ public class DroneService {
         return droneRepository.findAllById(droneIds);
     }
 
+
+
+
+    /**
+     * Updates an existing drone in the database.
+     *
+     * @param drone the drone with updated fields
+     * @return the updated drone
+     */
+    public Drone updateDrone(Drone drone) {
+        return droneRepository.save(drone);
+    }
+
+    
+
     /**
      * Generates the next serial number based on the serial number
      * of the last registered drone.

@@ -13,8 +13,19 @@ function getAuthHeaders() {
 // Check authentication on page load
 function checkAuth() {
     const token = localStorage.getItem('jwt_token');
+    const role = localStorage.getItem('user_role');
+    
     if (!token) {
         window.location.href = '/login.html';
+        return;
+    }
+    
+    // Show Admin tab only if the user has the ADMIN role
+    if (role === 'ADMIN') {
+        const adminNavItem = document.getElementById('admin-nav-item');
+        if (adminNavItem) {
+            adminNavItem.classList.remove('d-none');
+        }
     }
 }
 
@@ -34,13 +45,19 @@ function showSection(sectionName) {
     });
     
     // Show selected section
-    document.getElementById(`${sectionName}-section`).classList.remove('d-none');
+    const targetSection = document.getElementById(`${sectionName}-section`);
+    if (targetSection) {
+        targetSection.classList.remove('d-none');
+    }
     
     // Update active nav link
     document.querySelectorAll('.nav-link').forEach(link => {
         link.classList.remove('active');
     });
-    document.querySelector(`[data-section="${sectionName}"]`).classList.add('active');
+    const activeLink = document.querySelector(`[data-section="${sectionName}"]`);
+    if (activeLink) {
+        activeLink.classList.add('active');
+    }
     
     // Load section data
     if (sectionName === 'drones') {
@@ -49,6 +66,8 @@ function showSection(sectionName) {
         loadMaintenanceDrones();
     } else if (sectionName === 'telemetry') {
         loadDroneSelect();
+    } else if (sectionName === 'admin') {
+        loadAdminDrones();
     }
 }
 
@@ -61,6 +80,7 @@ async function loadDrones() {
         
         if (response.status === 401) {
             localStorage.removeItem('jwt_token');
+            localStorage.removeItem('user_role');
             window.location.href = '/login.html';
             return;
         }
@@ -135,6 +155,7 @@ async function loadMaintenanceDrones() {
         
         if (response.status === 401) {
             localStorage.removeItem('jwt_token');
+            localStorage.removeItem('user_role');
             window.location.href = '/login.html';
             return;
         }
@@ -296,7 +317,7 @@ document.getElementById('prediction-form').addEventListener('submit', async (e) 
         } else {
             predictionDiv.innerHTML = `
                 <div class="alert alert-danger">
-                    <strong>Error:</strong> ${data.error}
+                    <strong>Error:</strong> ${data.error || 'Unknown error'}
                 </div>
             `;
         }
@@ -308,6 +329,125 @@ document.getElementById('prediction-form').addEventListener('submit', async (e) 
         `;
     }
 });
+
+// ==========================================
+// ADMIN SECTION FUNCTIONS
+// ==========================================
+
+// Admin Section: Load drones with action buttons
+async function loadAdminDrones() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/drones`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const drones = await response.json();
+        
+        const tbody = document.getElementById('admin-drones-table-body');
+        tbody.innerHTML = '';
+        
+        if (drones.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No drones found</td></tr>';
+            return;
+        }
+        
+        drones.forEach(drone => {
+            const isMaintenance = drone.status === 'MAINTENANCE';
+            const btnClass = isMaintenance ? 'btn-secondary' : 'btn-warning';
+            const btnText = isMaintenance ? 'In Maintenance' : 'Send to Maintenance';
+            const btnDisabled = isMaintenance ? 'disabled' : '';
+            
+            const row = `
+                <tr>
+                    <td>${drone.droneId}</td>
+                    <td>${drone.serialNumber}</td>
+                    <td>${drone.droneModel?.name || 'N/A'}</td>
+                    <td><span class="badge bg-${getStatusColor(drone.status)}">${drone.status}</span></td>
+                    <td>${drone.batteryLevel}%</td>
+                    <td>
+                        <button class="btn btn-sm ${btnClass}" ${btnDisabled} 
+                                onclick="sendToMaintenance(${drone.droneId}, '${drone.serialNumber}')">
+                            <i class="bi bi-tools"></i> ${btnText}
+                        </button>
+                    </td>
+                </tr>
+            `;
+            tbody.innerHTML += row;
+        });
+    } catch (error) {
+        console.error('Error loading admin drones:', error);
+        document.getElementById('admin-drones-table-body').innerHTML = 
+            '<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>';
+    }
+}
+
+// Admin Section: Add new drone
+const addDroneForm = document.getElementById('add-drone-form');
+if (addDroneForm) {
+    addDroneForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const payload = {
+            droneModelId: parseInt(document.getElementById('drone-model-id').value),
+            status: document.getElementById('drone-status').value,
+            batteryLevel: parseFloat(document.getElementById('drone-battery').value),
+            totalFlightHours: parseFloat(document.getElementById('drone-hours').value)
+        };
+
+        try {
+            const response = await fetch('/api/admin/drones', {
+                method: 'POST',
+                headers: getAuthHeaders(),
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert('Drone added successfully!');
+                document.getElementById('add-drone-form').reset();
+                loadAdminDrones(); // Reload table
+                loadDrones();      // Update main counters
+            } else {
+                const err = await response.json();
+                alert('Error: ' + (err.message || 'Failed to add drone'));
+            }
+        } catch (error) {
+            console.error('Error adding drone:', error);
+            alert('Connection error');
+        }
+    });
+}
+
+// Admin Section: Send to maintenance
+async function sendToMaintenance(droneId, serialNumber) {
+    const description = prompt(`Enter maintenance description for drone ${serialNumber}:`, "Routine check");
+    if (!description) return; // Cancelled by user
+
+    // We use ID 1 as default technician (ensure you have a user with ID 1 in your DB)
+    const technicianId = 1; 
+
+    try {
+        const response = await fetch(`/api/admin/drones/${droneId}/send-to-maintenance?description=${encodeURIComponent(description)}&technicianId=${technicianId}`, {
+            method: 'PATCH',
+            headers: getAuthHeaders()
+        });
+
+        if (response.ok) {
+            alert('Drone sent to maintenance successfully!');
+            loadAdminDrones();
+            loadDrones();
+            loadMaintenanceDrones();
+        } else {
+            alert('Failed to send drone to maintenance.');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Connection error');
+    }
+}
 
 // Load initial data
 document.addEventListener('DOMContentLoaded', () => {
