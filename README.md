@@ -27,6 +27,7 @@ Development follows a progressive approach, starting with the core backend and d
 - **Data Visualization:** Design interactive dashboards and operational KPIs in Power BI.
 - **Containerization:** Package the application and database using Docker and Docker Compose.
 - **Best Practices:** Apply modern software engineering, security, and data pipeline practices throughout the application lifecycle.
+- **Security & Access Control:** Implement robust authentication and authorization using Spring Security, JWT, and Role-Based Access Control (RBAC).
 
 ---
 
@@ -76,11 +77,11 @@ The project follows an end-to-end data flow from real-time generation to analyti
 
 | Domain | Technologies |
 | :--- | :--- |
-| **Backend** | Java 21, Spring Boot 3, Maven, Spring Data JPA, Hibernate, REST APIs |
+| **Backend & Security** | Java 21, Spring Boot 3, Spring Security, JWT (JJWT), BCrypt, Maven, Spring Data JPA |
 | **Database & Cache** | PostgreSQL 16, Redis 7, Spring Data Redis |
 | **Data Engineering** | Python 3, Pandas, NumPy, Psycopg2, Redis-py |
 | **Machine Learning** | Python, Scikit-learn, Feature Engineering, Predictive Modeling |
-| **Frontend** | HTML5, JavaScript (ES6+), Bootstrap 5, Fetch API |
+| **Frontend** | HTML5, JavaScript (ES6+), Bootstrap 5, Fetch API, LocalStorage (JWT) |
 | **Data Visualization** | Power BI, DAX |
 | **DevOps & Tools** | Docker, Docker Compose, Git, GitHub, VS Code, DBeaver |
 
@@ -98,6 +99,24 @@ Users ──> Missions <── Drones
 Drones ──┬──> Maintenance
          └──> Telemetry
 ```
+
+
+## Security & Access Control
+
+- **JWT Authentication**: Stateless token-based authentication. Users receive a JWT upon login, stored in `localStorage` and sent in the `Authorization: Bearer <token>` header.
+- **Role-Based Access Control (RBAC)**: Endpoints are protected based on user roles (e.g., `/api/admin/**` requires `ROLE_ADMIN`).
+- **Password Hashing**: All user passwords are securely hashed using BCrypt before storage.
+- **OpenAPI Integration**: Swagger UI supports Bearer token authorization for testing protected endpoints.
+
+---
+
+## Domain Model & Roles
+
+The platform structures relationships between core operational entities and enforces strict role-based access:
+
+- **Users** (ADMIN, OPERATOR, MAINTENANCE, ANALYST) manage Missions and Drones.
+- **Drones** are linked to Maintenance records and Telemetry data.
+- **Missions** connect Users (pilots) to Drones.
 
 ### Telemetry Payload
 
@@ -175,23 +194,28 @@ drone-fleet-platform/
 ├── docs/                      # Architectural decisions, benchmarks, and guides
 │   └── database/              # SQL scripts for schema and seed data
 │
-├── scripts/                   # Python data engineering pipeline
+├── scripts/                   # Python data engineering & ML pipeline
 │   ├── generate_data.py       # Telemetry generator and Redis/PostgreSQL writer
+│   ├── train_model.py         # ML training pipeline
+│   ├── ml_service.py          # Flask inference service
 │   ├── config.example.py      # Configuration template
 │   ├── requirements.txt       # Python dependencies
-│   ── output/                # Generated CSVs for Power BI
+│   └── output/                # Generated CSVs for Power BI
 │
 ├── src/
 │   ├── main/
 │   │   ├── java/
 │   │   │   └── com/sosag/dronefleet/
-│   │   │       ├── config/    # Redis and OpenAPI configurations
-│   │   │       ├── controller/# REST API endpoints
+│   │   │       ├── config/    # Security, JWT, Redis, and OpenAPI configurations
+│   │   │       ├── controller/# REST API endpoints (including Admin)
+│   │   │       ├── dto/       # Data Transfer Objects
 │   │   │       ├── service/   # Business logic and Real-time services
 │   │   │       ├── repository/# Data access layer
-│   │   │       ├── model/     # JPA entities
+│   │   │       ├── model/     # JPA entities (User, Drone, Telemetry, etc.)
+│   │   │       ├── security/  # JWT Authentication Filter
 │   │   │       └── exception/ # Global exception handling
 │   │   └── resources/
+│   │       ├── static/        # Web dashboard (HTML/JS/CSS, login.html)
 │   │       └── application.properties.example
 │   │
 │   └── test/                  # Unit and integration tests
@@ -204,6 +228,8 @@ drone-fleet-platform/
 ```
 
 ---
+
+## Development Roadmap
 
 ## Development Roadmap
 
@@ -242,19 +268,26 @@ drone-fleet-platform/
   - Create multi-stage Dockerfile for Java application.
   - Configure Docker Compose for App, PostgreSQL, and Redis.
 
-- - [x] **Phase 7 — Machine Learning Model Training**
-  - [x] Build Python ETL script to extract historical data.
-  - [x] Train, evaluate (MAE, R²), and export Random Forest model using Scikit-learn.
-  - [x] Deploy model via Flask microservice for real-time inference.
+- [x] **Phase 7 — Machine Learning Model Training**
+  - Build Python ETL script to extract historical data.
+  - Train, evaluate (MAE, R²), and export Random Forest model using Scikit-learn.
+  - Deploy model via Flask microservice for real-time inference.
 
-- [x] **Phase 8 — Web Dashboard & Analytics**
-  - [x] Develop Single Page Application (SPA) dashboard with Bootstrap.
-  - [x] Integrate real-time telemetry visualization from Redis.
-  - [x] Connect ML prediction endpoint to the web interface.
+- [x] **Phase 8 — Web Dashboard, Security & Admin Panel**
+  - Develop Single Page Application (SPA) dashboard with Bootstrap.
+  - Integrate real-time telemetry visualization from Redis.
+  - Connect ML prediction endpoint to the web interface.
+  - Implement Spring Security with JWT authentication and BCrypt password hashing.
+  - Add Role-Based Access Control (RBAC) for ADMIN, OPERATOR, etc.
+  - Build Admin Panel to manage fleet (add drones, schedule maintenance).
 
 - [ ] **Phase 9 — Power BI Analytics**
   - Connect analytical data sources and design fleet management dashboards.
 
+- [ ] **Phase 10 — Advanced DevOps & UI Enhancements**
+  - Dockerize the Python ML microservice for single-command deployment.
+  - Integrate Leaflet.js for real-time GPS map visualization.
+  - Enhance CI/CD pipelines with automated testing.
 ---
 
 ## Getting Started
@@ -303,6 +336,11 @@ pip install -r requirements.txt
 python ml_service.py
 
 ```
+
+###  Accessing the Web Dashboard
+1. Open `http://localhost:8080/login.html`
+2. Register a new user or log in with admin credentials.
+3. Navigate the dashboard. Admin users will see the "Admin Panel" to add drones or schedule maintenance.
 ---
 
 
