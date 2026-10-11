@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Drone Fleet Platform</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { 
+            background-color: #f8f9fa; 
+            height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
+        .login-card { 
+            width: 100%; 
+            max-width: 400px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+            border: none;
+            border-radius: 12px;
+        }
+        .brand-icon {
+            font-size: 3rem;
+            color: #0d6efd;
+        }
+    </style>
+</head>
+<body>
+    <div class="card login-card">
+        <div class="card-body p-5">
+            <div class="text-center mb-4">
+                <div class="brand-icon">🚁</div>
+                <h3 class="mt-2">Drone Fleet</h3>
+                <p class="text-muted">Sign in to your account</p>
+            </div>
+            
+            <form id="login-form">
+                <div class="mb-3">
+                    <label for="email" class="form-label fw-bold">Email</label>
+                    <input type="email" class="form-control form-control-lg" id="email" placeholder="admin@dronefleet.com" required>
+                </div>
+                <div class="mb-4">
+                    <label for="password" class="form-label fw-bold">Password</label>
+                    <input type="password" class="form-control form-control-lg" id="password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-lg w-100" id="login-btn">
+                    Sign In
+                </button>
+                <div id="error-msg" class="alert alert-danger mt-3 text-center" style="display: none;"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorMsg = document.getElementById('error-msg');
+            const loginBtn = document.getElementById('login-btn');
+            
+            // Deshabilitar botón mientras carga
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Signing in...';
+            errorMsg.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+
+                if (data.token) {
+                    // Guardar token y rol en el navegador
+                    localStorage.setItem('jwt_token', data.token);
+                    localStorage.setItem('user_role', data.role);
+                    // Redirigir al dashboard
+                    window.location.href = '/index.html';
+                } else {
+                    errorMsg.textContent = data.message || 'Invalid email or password';
+                    errorMsg.style.display = 'block';
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Sign In';
+                }
+            } catch (err) {
+                errorMsg.textContent = 'Connection error. Is the server running?';
+                errorMsg.style.display = 'block';
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Sign In';
+            }
+        });
+    </script>
+</body>
+</html>

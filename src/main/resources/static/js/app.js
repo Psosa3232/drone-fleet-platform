@@ -1,6 +1,23 @@
 // API Base URL
 const API_BASE_URL = '/api/v1';
 
+// Helper function to get auth headers with JWT token
+function getAuthHeaders() {
+    const token = localStorage.getItem('jwt_token');
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+    };
+}
+
+// Check authentication on page load
+function checkAuth() {
+    const token = localStorage.getItem('jwt_token');
+    if (!token) {
+        window.location.href = '/login.html';
+    }
+}
+
 // Navigation
 document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', (e) => {
@@ -38,7 +55,20 @@ function showSection(sectionName) {
 // Drones Section
 async function loadDrones() {
     try {
-        const response = await fetch(`${API_BASE_URL}/drones`);
+        const response = await fetch(`${API_BASE_URL}/drones`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (response.status === 401) {
+            localStorage.removeItem('jwt_token');
+            window.location.href = '/login.html';
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const drones = await response.json();
         
         // Update counters
@@ -49,13 +79,23 @@ async function loadDrones() {
             drones.filter(d => d.status === 'IN_MISSION').length;
         
         // Load maintenance count
-        const maintResponse = await fetch(`${API_BASE_URL}/drones/maintenance-needed`);
-        const maintDrones = await maintResponse.json();
-        document.getElementById('maintenance-drones').textContent = maintDrones.length;
+        const maintResponse = await fetch(`${API_BASE_URL}/drones/maintenance-needed`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (maintResponse.ok) {
+            const maintDrones = await maintResponse.json();
+            document.getElementById('maintenance-drones').textContent = maintDrones.length;
+        }
         
         // Populate table
         const tbody = document.getElementById('drones-table-body');
         tbody.innerHTML = '';
+        
+        if (drones.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No drones found</td></tr>';
+            return;
+        }
         
         drones.forEach(drone => {
             const row = `
@@ -72,6 +112,8 @@ async function loadDrones() {
         });
     } catch (error) {
         console.error('Error loading drones:', error);
+        document.getElementById('drones-table-body').innerHTML = 
+            '<tr><td colspan="6" class="text-center text-danger">Error loading drones</td></tr>';
     }
 }
 
@@ -87,14 +129,27 @@ function getStatusColor(status) {
 // Maintenance Section
 async function loadMaintenanceDrones() {
     try {
-        const response = await fetch(`${API_BASE_URL}/drones/maintenance-needed`);
+        const response = await fetch(`${API_BASE_URL}/drones/maintenance-needed`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (response.status === 401) {
+            localStorage.removeItem('jwt_token');
+            window.location.href = '/login.html';
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const drones = await response.json();
         
         const tbody = document.getElementById('maintenance-table-body');
         tbody.innerHTML = '';
         
         if (drones.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center">No drones need maintenance</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No drones need maintenance</td></tr>';
             return;
         }
         
@@ -113,13 +168,22 @@ async function loadMaintenanceDrones() {
         });
     } catch (error) {
         console.error('Error loading maintenance drones:', error);
+        document.getElementById('maintenance-table-body').innerHTML = 
+            '<tr><td colspan="6" class="text-center text-danger">Error loading data</td></tr>';
     }
 }
 
 // Telemetry Section
 async function loadDroneSelect() {
     try {
-        const response = await fetch(`${API_BASE_URL}/drones`);
+        const response = await fetch(`${API_BASE_URL}/drones`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const drones = await response.json();
         
         const select = document.getElementById('drone-select');
@@ -141,7 +205,14 @@ async function loadDroneSelect() {
 
 async function loadTelemetry(serialNumber) {
     try {
-        const response = await fetch(`/api/realtime/drones/${serialNumber}`);
+        const response = await fetch(`/api/realtime/drones/${serialNumber}`, {
+            headers: getAuthHeaders()
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         const telemetryDiv = document.getElementById('telemetry-data');
@@ -197,9 +268,7 @@ document.getElementById('prediction-form').addEventListener('submit', async (e) 
     try {
         const response = await fetch('/api/v1/ml/predict', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: getAuthHeaders(),
             body: JSON.stringify({
                 speed: speed,
                 altitude: altitude,
@@ -242,5 +311,6 @@ document.getElementById('prediction-form').addEventListener('submit', async (e) 
 
 // Load initial data
 document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
     showSection('drones');
 });

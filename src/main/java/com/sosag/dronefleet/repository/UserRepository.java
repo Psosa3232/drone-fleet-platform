@@ -2,12 +2,13 @@ package com.sosag.dronefleet.repository;
 
 import com.sosag.dronefleet.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-/**
- * Repository for accessing and managing user data.
- *
- * <p>Spring Data JPA provides the implementation automatically,
- * allowing CRUD operations to be performed without writing SQL queries.</p>
- */
+import java.util.Optional;
+
+@Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+    
+    Optional<User> findByEmail(String email);
 }
+
